@@ -249,3 +249,25 @@ export const DASHBOARD_METRICS = {
     certificatesEarned: 8
   }
 };
+
+// Mock Assessments Data
+export const MOCK_ASSESSMENTS = [
+  {
+    id: 1,
+    title: 'GMP Fundamentals Assessment',
+    description: 'Assessment for GMP Fundamentals training',
+    type: 'Quiz',
+    status: 'Pending',
+    dueDate: '2025-10-30',
+    score: null
+  },
+  {
+    id: 2,
+    title: 'Laboratory Safety Procedures Assessment',
+    description: 'Assessment for Laboratory Safety Procedures training',
+    type: 'Quiz',
+    status: 'Pending',
+    dueDate: '2025-10-29',
+    score: null
+  }
+];

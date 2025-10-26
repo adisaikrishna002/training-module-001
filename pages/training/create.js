@@ -1,92 +1,44 @@
 import { useState } from 'react';
+import Materials from '../materials';
 import Layout from '../../components/Layout';
 import { useAuth } from '../../components/AuthContext';
 import { TRAINING_CATEGORIES, TRAINING_TYPES, MOCK_USERS } from '../../data/mockData';
 import { PERMISSIONS, MODULES, ROLES } from '../../utils/rbac';
 
-// File Upload Component
-const FileUpload = ({ files, onFilesChange, accept = "*/*", multiple = true }) => {
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    onFilesChange([...files, ...selectedFiles]);
-  };
 
-  const removeFile = (index) => {
-    const newFiles = files.filter((_, i) => i !== index);
-    onFilesChange(newFiles);
+// Material Selection Modal
+const MaterialSelectionModal = ({ materials, selected, onSelect, onClose }) => {
+  const [localSelected, setLocalSelected] = useState(selected);
+  const toggleMaterial = (material) => {
+    setLocalSelected((prev) =>
+      prev.some((m) => m.id === material.id)
+        ? prev.filter((m) => m.id !== material.id)
+        : [...prev, material]
+    );
   };
-
   return (
-    <div style={{
-      border: '2px dashed #ddd',
-      borderRadius: '8px',
-      padding: '20px',
-      textAlign: 'center',
-      backgroundColor: '#f9f9f9'
-    }}>
-      <input
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-        id="file-upload"
-      />
-      <label htmlFor="file-upload" style={{
-        display: 'inline-block',
-        padding: '10px 20px',
-        backgroundColor: '#007bff',
-        color: 'white',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }}>
-        Choose Files
-      </label>
-      <p style={{ margin: '10px 0 0 0', color: '#666', fontSize: '14px' }}>
-        Upload training materials (PDF, PPT, Video, SCORM packages)
-      </p>
-      
-      {files.length > 0 && (
-        <div style={{ marginTop: '15px' }}>
-          <h4>Selected Files:</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {files.map((file, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 12px',
-                backgroundColor: 'white',
-                borderRadius: '4px',
-                border: '1px solid #ddd'
-              }}>
-                <span style={{ fontSize: '14px' }}>
-                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#dc3545',
-                    cursor: 'pointer',
-                    fontSize: '16px'
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
+    <div className="modal-overlay" style={{ position: 'fixed', top:0, left:0, right:0, bottom:0, background: 'rgba(0,0,0,0.3)', zIndex: 1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div className="modal-content" style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 400, maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
+        <h3>Select Materials from Library</h3>
+        <div style={{ margin: '16px 0', maxHeight: 300, overflowY: 'auto' }}>
+          {materials.map((mat) => (
+            <div key={mat.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <input type="checkbox" checked={localSelected.some((m) => m.id === mat.id)} onChange={() => toggleMaterial(mat)} />
+              <span style={{ marginLeft: 8 }}>{mat.title} <span style={{ color: '#888', fontSize: 12 }}>({mat.fileType.toUpperCase()}, {mat.category})</span></span>
+            </div>
+          ))}
         </div>
-      )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ padding: '6px 16px', background: '#6c757d', color: 'white', border: 'none', borderRadius: 4 }}>Cancel</button>
+          <button onClick={() => onSelect(localSelected)} style={{ padding: '6px 16px', background: '#007bff', color: 'white', border: 'none', borderRadius: 4 }}>Select</button>
+        </div>
+      </div>
     </div>
   );
 };
 
 // Training Form Component
-const TrainingForm = ({ onSubmit, onCancel }) => {
+const TrainingForm = ({ onSubmit, onCancel, showNotification }) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
@@ -109,7 +61,42 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
   });
 
   const [errors, setErrors] = useState({});
-  const [files, setFiles] = useState([]);
+  // Get materials from Materials Library (mock import)
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  // Copy-paste the mock materials from materials.js for now
+  const [libraryMaterials] = useState([
+    {
+      id: 1,
+      title: 'GMP Guidelines Document',
+      fileType: 'pdf',
+      category: 'Guidelines',
+    },
+    {
+      id: 2,
+      title: 'Laboratory Safety Training Video',
+      fileType: 'mp4',
+      category: 'Videos',
+    },
+    {
+      id: 3,
+      title: 'Quality Control SOP Template',
+      fileType: 'docx',
+      category: 'Templates',
+    },
+    {
+      id: 4,
+      title: 'SCORM Training Package - Validation',
+      fileType: 'scorm',
+      category: 'Interactive Content',
+    },
+    {
+      id: 5,
+      title: 'Equipment Maintenance Form',
+      fileType: 'pdf',
+      category: 'Forms',
+    },
+  ]);
+  const [selectedMaterials, setSelectedMaterials] = useState([]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -154,7 +141,8 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  // Workflow button handlers
+  const handleSaveDraft = (e) => {
     e.preventDefault();
     if (validateForm()) {
       const trainingData = {
@@ -163,13 +151,68 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
         status: 'Draft',
         createdBy: user.name,
         createdDate: new Date().toISOString(),
-        materials: files.map(file => file.name),
+        materials: selectedMaterials.map(mat => mat.title),
         assignedCount: 0,
         completedCount: 0,
         overdueCount: 0
       };
+      showNotification('Training saved as draft!', 'success');
       onSubmit(trainingData);
     }
+  };
+
+  const handlePublish = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      const trainingData = {
+        ...formData,
+        id: Date.now(),
+        status: 'Published',
+        createdBy: user.name,
+        createdDate: new Date().toISOString(),
+        materials: selectedMaterials.map(mat => mat.title),
+        assignedCount: 0,
+        completedCount: 0,
+        overdueCount: 0
+      };
+      showNotification('Training published!', 'success');
+      onSubmit(trainingData);
+    }
+  };
+
+  const handleSubmitForApproval = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      const trainingData = {
+        ...formData,
+        id: Date.now(),
+        status: 'Pending Approval',
+        createdBy: user.name,
+        createdDate: new Date().toISOString(),
+        materials: selectedMaterials.map(mat => mat.title),
+        assignedCount: 0,
+        completedCount: 0,
+        overdueCount: 0
+      };
+      showNotification('Training submitted for approval!', 'info');
+      onSubmit(trainingData);
+    }
+  };
+
+  const handleUploadMaterial = (e) => {
+    e.preventDefault();
+    setShowMaterialModal(true);
+    showNotification('Open material upload dialog.', 'info');
+  };
+
+  const handleAddTrainer = (e) => {
+    e.preventDefault();
+    showNotification('Add Trainer dialog (not implemented).', 'info');
+  };
+
+  const handleAssignAssessment = (e) => {
+    e.preventDefault();
+    showNotification('Assign Assessment dialog (not implemented).', 'info');
   };
 
   const inputStyle = {
@@ -188,7 +231,7 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <form style={{ maxWidth: '800px', margin: '0 auto' }}>
       <div style={{
         backgroundColor: 'white',
         padding: '30px',
@@ -422,12 +465,27 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
           <h3 style={{ marginBottom: '20px', color: '#666', borderBottom: '2px solid #f0f0f0', paddingBottom: '10px' }}>
             Training Materials
           </h3>
-          
-          <FileUpload
-            files={files}
-            onFilesChange={setFiles}
-            accept=".pdf,.ppt,.pptx,.mp4,.avi,.scorm,.zip"
-          />
+          <button type="button" onClick={() => setShowMaterialModal(true)} style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginBottom: 12 }}>
+            Select from Materials Library
+          </button>
+          {selectedMaterials.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <h4>Selected Materials:</h4>
+              <ul>
+                {selectedMaterials.map((mat) => (
+                  <li key={mat.id}>{mat.title} <span style={{ color: '#888', fontSize: 12 }}>({mat.fileType.toUpperCase()}, {mat.category})</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {showMaterialModal && (
+            <MaterialSelectionModal
+              materials={libraryMaterials}
+              selected={selectedMaterials}
+              onSelect={(mats) => { setSelectedMaterials(mats); setShowMaterialModal(false); }}
+              onClose={() => setShowMaterialModal(false)}
+            />
+          )}
         </div>
 
         {/* Additional Information */}
@@ -487,8 +545,8 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
           </div>
         </div>
 
-        {/* Form Actions */}
-        <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', borderTop: '1px solid #e0e0e0', paddingTop: '20px' }}>
+  {/* Form Actions */}
+  <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', borderTop: '1px solid #e0e0e0', paddingTop: '20px' }}>
           <button
             type="button"
             onClick={onCancel}
@@ -504,9 +562,9 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
           >
             Cancel
           </button>
-          
           <button
-            type="submit"
+            type="button"
+            onClick={handleSaveDraft}
             style={{
               padding: '12px 24px',
               backgroundColor: '#ffc107',
@@ -520,9 +578,57 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
           >
             Save as Draft
           </button>
-          
           <button
-            type="submit"
+            type="button"
+            onClick={handleUploadMaterial}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            Upload Material
+          </button>
+          <button
+            type="button"
+            onClick={handleAddTrainer}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            Add Trainer
+          </button>
+          <button
+            type="button"
+            onClick={handleAssignAssessment}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#6610f2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            Assign Assessment
+          </button>
+          <button
+            type="button"
+            onClick={handlePublish}
             style={{
               padding: '12px 24px',
               backgroundColor: '#007bff',
@@ -534,7 +640,23 @@ const TrainingForm = ({ onSubmit, onCancel }) => {
               fontWeight: 'bold'
             }}
           >
-            Create Training
+            Publish
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmitForApproval}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#ffc107',
+              color: '#333',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}
+          >
+            Submit for Approval
           </button>
         </div>
       </div>
@@ -595,7 +717,7 @@ export default function CreateTraining() {
           </div>
         )}
 
-        <TrainingForm onSubmit={handleSubmit} onCancel={handleCancel} />
+  <TrainingForm onSubmit={handleSubmit} onCancel={handleCancel} showNotification={showNotification} />
       </div>
     </Layout>
   );

@@ -3,18 +3,28 @@ import Layout from '../components/Layout';
 import { ROLES } from '../utils/rbac';
 import { DASHBOARD_METRICS, MOCK_USER_TRAININGS, MOCK_TRAININGS } from '../data/mockData';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 // Dashboard Card Component
-const DashboardCard = ({ title, value, subtitle, color, icon, trend }) => (
-  <div style={{
-    backgroundColor: 'white',
-    borderRadius: '10px',
-    padding: '25px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    border: `3px solid ${color}`,
-    position: 'relative',
-    overflow: 'hidden'
-  }}>
+const DashboardCard = ({ title, value, subtitle, color, icon, trend, onClick }) => (
+  <div
+    style={{
+      backgroundColor: 'white',
+      borderRadius: '10px',
+      padding: '25px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      border: `3px solid ${color}`,
+      position: 'relative',
+      overflow: 'hidden',
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'box-shadow 0.2s',
+    }}
+    onClick={onClick}
+    tabIndex={onClick ? 0 : undefined}
+    role={onClick ? 'button' : undefined}
+    onKeyPress={onClick ? (e) => { if (e.key === 'Enter') onClick(); } : undefined}
+    title={onClick ? `View details for ${title}` : undefined}
+  >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
         <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#666' }}>{title}</h3>
@@ -37,6 +47,7 @@ const DashboardCard = ({ title, value, subtitle, color, icon, trend }) => (
   </div>
 );
 
+
 // Countdown Timer Component
 const CountdownTimer = ({ dueDate, title }) => {
   const [timeLeft, setTimeLeft] = useState('');
@@ -51,13 +62,11 @@ const CountdownTimer = ({ dueDate, title }) => {
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        
         setTimeLeft(`${days}d ${hours}h ${minutes}m`);
       } else {
         setTimeLeft('OVERDUE');
       }
     }, 1000);
-
     return () => clearInterval(timer);
   }, [dueDate]);
 
@@ -85,72 +94,25 @@ const CountdownTimer = ({ dueDate, title }) => {
   );
 };
 
-// Training Progress Component
+// Simple TrainingProgress component for dashboard
 const TrainingProgress = ({ training }) => {
-  const progressColor = training.progress >= 80 ? '#28a745' : training.progress >= 50 ? '#ffc107' : '#dc3545';
-  
+  if (!training) return null;
   return (
     <div style={{
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      padding: '15px',
-      marginBottom: '15px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+      border: '1px solid #e0e0e0',
+      borderRadius: 8,
+      padding: 16,
+      marginBottom: 16,
+      background: '#fafbfc',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <h4 style={{ margin: 0, fontSize: '16px' }}>{training.title}</h4>
-        <span style={{
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          backgroundColor: training.status === 'Completed' ? '#28a745' : 
-                          training.status === 'In Progress' ? '#007bff' : '#6c757d',
-          color: 'white'
-        }}>
-          {training.status}
-        </span>
+      <div style={{ fontWeight: 'bold', fontSize: 16 }}>{training.title}</div>
+      <div style={{ color: '#666', fontSize: 14 }}>{training.status} | Due: {training.dueDate || training.endDate}</div>
+      <div style={{ marginTop: 8 }}>
+        Progress: {training.progress != null ? training.progress + '%' : 'N/A'}
       </div>
-      
-      <div style={{ marginBottom: '10px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
-          <span>Progress: {training.progress}%</span>
-          <span>Due: {new Date(training.dueDate).toLocaleDateString()}</span>
-        </div>
-        <div style={{
-          width: '100%',
-          height: '6px',
-          backgroundColor: '#e9ecef',
-          borderRadius: '3px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            width: `${training.progress}%`,
-            height: '100%',
-            backgroundColor: progressColor,
-            transition: 'width 0.3s ease'
-          }} />
-        </div>
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '12px', color: '#666' }}>
-          Category: {training.category}
-        </span>
-        {training.status !== 'Completed' && (
-          <button style={{
-            padding: '6px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}>
-            Continue
-          </button>
-        )}
-      </div>
+      {training.score != null && (
+        <div>Score: {training.score}</div>
+      )}
     </div>
   );
 };
@@ -158,11 +120,10 @@ const TrainingProgress = ({ training }) => {
 // Role-specific Dashboard Components
 const AdminDashboard = () => {
   const metrics = DASHBOARD_METRICS[ROLES.SYSTEM_ADMIN];
-  
+  const router = useRouter();
   return (
     <div>
       <h2 style={{ marginBottom: '30px', color: '#333' }}>System Administrator Dashboard</h2>
-      
       {/* Key Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <DashboardCard
@@ -172,6 +133,7 @@ const AdminDashboard = () => {
           color="#007bff"
           icon="👥"
           trend={{ type: 'up', value: '+12 this month' }}
+          onClick={() => router.push('/users')}
         />
         <DashboardCard
           title="Active Trainings"
@@ -180,6 +142,7 @@ const AdminDashboard = () => {
           color="#28a745"
           icon="📚"
           trend={{ type: 'up', value: '+3 new this week' }}
+          onClick={() => router.push('/trainings?filter=active')}
         />
         <DashboardCard
           title="Total Completions"
@@ -188,6 +151,7 @@ const AdminDashboard = () => {
           color="#17a2b8"
           icon="✅"
           trend={{ type: 'up', value: '+89 this month' }}
+          onClick={() => router.push('/reports?type=completion')}
         />
         <DashboardCard
           title="Compliance Rate"
@@ -196,6 +160,7 @@ const AdminDashboard = () => {
           color="#ffc107"
           icon="📊"
           trend={{ type: 'up', value: '+2.3% from last month' }}
+          onClick={() => router.push('/reports?type=compliance')}
         />
         <DashboardCard
           title="Overdue Trainings"
@@ -204,6 +169,7 @@ const AdminDashboard = () => {
           color="#dc3545"
           icon="⚠️"
           trend={{ type: 'down', value: '-5 from last week' }}
+          onClick={() => router.push('/trainings?filter=overdue')}
         />
         <DashboardCard
           title="Pending Approvals"
@@ -211,6 +177,7 @@ const AdminDashboard = () => {
           subtitle="Awaiting approval"
           color="#6f42c1"
           icon="📋"
+          onClick={() => router.push('/approvals')}
         />
       </div>
 
@@ -382,11 +349,10 @@ const TraineeDashboard = () => {
 
 const CoordinatorDashboard = () => {
   const metrics = DASHBOARD_METRICS[ROLES.TRAINING_COORDINATOR];
-  
+  const router = useRouter();
   return (
     <div>
       <h2 style={{ marginBottom: '30px', color: '#333' }}>Training Coordinator Dashboard</h2>
-      
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <DashboardCard
           title="My Trainings"
@@ -394,6 +360,7 @@ const CoordinatorDashboard = () => {
           subtitle="Managed trainings"
           color="#007bff"
           icon="📚"
+          onClick={() => router.push('/trainings')}
         />
         <DashboardCard
           title="Active Assignments"
@@ -401,6 +368,7 @@ const CoordinatorDashboard = () => {
           subtitle="Current assignments"
           color="#28a745"
           icon="📋"
+          onClick={() => router.push('/assignments')}
         />
         <DashboardCard
           title="Completion Rate"
@@ -408,6 +376,7 @@ const CoordinatorDashboard = () => {
           subtitle="Overall completion"
           color="#17a2b8"
           icon="📊"
+          onClick={() => router.push('/reports?type=completion')}
         />
         <DashboardCard
           title="Overdue"
@@ -415,6 +384,7 @@ const CoordinatorDashboard = () => {
           subtitle="Need attention"
           color="#dc3545"
           icon="⚠️"
+          onClick={() => router.push('/assignments?filter=overdue')}
         />
         <DashboardCard
           title="Pending Approvals"
@@ -422,6 +392,7 @@ const CoordinatorDashboard = () => {
           subtitle="Awaiting approval"
           color="#6f42c1"
           icon="✋"
+          onClick={() => router.push('/approvals')}
         />
       </div>
 
