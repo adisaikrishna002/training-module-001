@@ -271,3 +271,11 @@ export const MOCK_ASSESSMENTS = [
     score: null
   }
 ];
+
+export { ROLES } from '../utils/rbac';
+export const ROLE_LABELS = {
+  SYSTEM_ADMIN: 'System Administrator',
+  TRAINING_COORDINATOR: 'Training Coordinator',
+  TRAINER: 'Trainer',
+  TRAINEE: 'Trainee'
+};

@@ -2,95 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { MOCK_USERS, ROLES, ROLE_LABELS } from '../../data/mockData';
 import { useAuth } from '../../components/AuthContext';
-
-// Training Material Modal Component
-const TrainingMaterialModal = ({ isOpen, onClose, material, onComplete, minTime = 30 }) => {
-  const [secondsLeft, setSecondsLeft] = useState(minTime);
-  const [canComplete, setCanComplete] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setSecondsLeft(minTime);
-    setCanComplete(false);
-  }, [isOpen, minTime]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (secondsLeft <= 0) {
-      setCanComplete(true);
-      return;
-    }
-    const timer = setTimeout(() => setSecondsLeft(s => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [secondsLeft, isOpen]);
-
-  if (!isOpen) return null;
-  const handleCancel = () => {
-    if (typeof onClose === 'function') {
-      onClose();
-    } else {
-      // fallback: navigate to dashboard or previous page
-      if (typeof window !== 'undefined') {
-        window.location.href = '/dashboard';
-      }
-    }
-  };
-  return (
-    <div className="modal-overlay" onClick={handleCancel}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
-        <h2>Training Material</h2>
-        <div style={{ margin: '20px 0', minHeight: '200px' }}>
-          {material ? (
-            <div>
-              <h3>{material.title}</h3>
-              <p>{material.description}</p>
-              {material.fileUrl && (
-                <a href={material.fileUrl} target="_blank" rel="noopener noreferrer">View Material File</a>
-              )}
-            </div>
-          ) : (
-            <div>No material found.</div>
-          )}
-        </div>
-        <div style={{ margin: '20px 0', fontWeight: 'bold' }}>
-          Time Remaining: {secondsLeft > 0 ? `${secondsLeft}s` : 'You can now complete training!'}
-        </div>
-        <button
-          onClick={canComplete ? onComplete : undefined}
-          disabled={!canComplete}
-          style={{
-            padding: '10px 24px',
-            backgroundColor: canComplete ? '#28a745' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: canComplete ? 'pointer' : 'not-allowed',
-            marginRight: '10px'
-          }}
-        >
-          Complete Training
-        </button>
-        <button
-          onClick={handleCancel}
-          style={{
-            padding: '10px 24px',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-};
+import TrainingMaterialModal from './TrainingMaterialModal';
 
 // Assignment Modal Component
 const AssignmentModal = ({ isOpen, onClose, training, onAssign }) => {
@@ -275,6 +187,71 @@ const AssignmentModal = ({ isOpen, onClose, training, onAssign }) => {
           <button onClick={handleAssign} style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Assign Training ({selectedUsers.length} users)</button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Assignments Page Component
+const AssignmentsPage = () => {
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+
+  const assignments = [
+    { id: 1, title: 'GMP Fundamentals', description: 'Basic GMP principles', fileUrl: '/materials/gmp.pdf' },
+    { id: 2, title: 'Safety Training', description: 'Workplace safety guidelines', fileUrl: '/materials/safety.pdf' },
+  ];
+
+  const handleAssignmentClick = (assignment) => {
+    setSelectedAssignment(assignment);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedAssignment(null);
+  };
+
+  return (
+    <div>
+      {!selectedAssignment ? (
+        <div>
+          <h1>Assignments</h1>
+          <ul>
+            {assignments.map((assignment) => (
+              <li key={assignment.id}>
+                <button onClick={() => handleAssignmentClick(assignment)}>
+                  {assignment.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="modal-overlay" onClick={handleCloseModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
+            <h2>Training Material</h2>
+            <div style={{ margin: '20px 0', minHeight: '200px' }}>
+              <h3>{selectedAssignment.title}</h3>
+              <p>{selectedAssignment.description}</p>
+              {selectedAssignment.fileUrl && (
+                <a href={selectedAssignment.fileUrl} target="_blank" rel="noopener noreferrer">View Material File</a>
+              )}
+            </div>
+            <button
+              onClick={handleCloseModal}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
