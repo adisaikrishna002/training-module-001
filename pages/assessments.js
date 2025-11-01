@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Layout from '../components/Layout';
-import { useAuth } from '../components/AuthContext';
 import { MOCK_TRAININGS } from '../data/mockData';
 import { PERMISSIONS, MODULES } from '../utils/rbac';
 
@@ -295,8 +294,373 @@ const AssessmentQuestions = ({ assessment, onSave, onCancel }) => {
   );
 };
 
+// Trainee Assessment Interface Component
+const TraineeAssessment = ({ assessment, onComplete, onCancel }) => {
+  // Sample questions for the assessment (in production, load from assessment.questions)
+  const sampleQuestions = [
+    {
+      id: 1,
+      type: 'multiple-choice',
+      question: 'What does GMP stand for?',
+      options: ['Good Manufacturing Practice', 'General Management Process', 'Global Marketing Plan', 'Great Medical Program'],
+      correctAnswer: 0,
+      points: 2
+    },
+    {
+      id: 2,
+      type: 'multiple-choice',
+      question: 'Which of the following is a key principle of GMP?',
+      options: ['Cost reduction', 'Quality assurance', 'Speed of production', 'Market expansion'],
+      correctAnswer: 1,
+      points: 2
+    },
+    {
+      id: 3,
+      type: 'true-false',
+      question: 'Documentation is an essential part of GMP compliance.',
+      options: ['True', 'False'],
+      correctAnswer: 0,
+      points: 1
+    },
+    {
+      id: 4,
+      type: 'multiple-choice',
+      question: 'What should you do if you notice a deviation in the manufacturing process?',
+      options: ['Ignore it if it seems minor', 'Report it immediately', 'Fix it yourself without documentation', 'Wait until the end of the shift'],
+      correctAnswer: 1,
+      points: 3
+    },
+    {
+      id: 5,
+      type: 'multiple-choice',
+      question: 'Personal protective equipment (PPE) should be:',
+      options: ['Used only when convenient', 'Worn at all times in production areas', 'Shared between workers', 'Optional for experienced staff'],
+      correctAnswer: 1,
+      points: 2
+    }
+  ];
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes in seconds
+  const [showResults, setShowResults] = useState(false);
+
+  // Timer effect
+  React.useEffect(() => {
+    if (timeLeft > 0 && !showResults) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0) {
+      handleSubmit();
+    }
+  }, [timeLeft, showResults]);
+
+  const currentQuestion = sampleQuestions[currentQuestionIndex];
+  const totalQuestions = sampleQuestions.length;
+
+  const handleAnswerSelect = (answerIndex) => {
+    setAnswers(prev => ({
+      ...prev,
+      [currentQuestion.id]: answerIndex
+    }));
+  };
+
+  const handleNext = () => {
+    if (currentQuestionIndex < totalQuestions - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
+  };
+
+  const handleSubmit = () => {
+    // Calculate score
+    let correctAnswers = 0;
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    sampleQuestions.forEach(question => {
+      totalPoints += question.points;
+      if (answers[question.id] === question.correctAnswer) {
+        correctAnswers++;
+        earnedPoints += question.points;
+      }
+    });
+
+    const percentage = Math.round((earnedPoints / totalPoints) * 100);
+    const passed = percentage >= assessment.passingScore;
+
+    setShowResults({
+      correctAnswers,
+      totalQuestions,
+      earnedPoints,
+      totalPoints,
+      percentage,
+      passed
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getAnsweredCount = () => {
+    return Object.keys(answers).length;
+  };
+
+  if (showResults) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '30px',
+          borderRadius: '10px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>
+            {showResults.passed ? '🎉' : '📚'}
+          </div>
+          
+          <h2 style={{ 
+            color: showResults.passed ? '#28a745' : '#dc3545',
+            marginBottom: '20px'
+          }}>
+            Assessment {showResults.passed ? 'Completed!' : 'Not Passed'}
+          </h2>
+
+          <div style={{ marginBottom: '20px', fontSize: '18px' }}>
+            <div>Score: {showResults.percentage}%</div>
+            <div>Correct Answers: {showResults.correctAnswers} of {showResults.totalQuestions}</div>
+            <div>Points Earned: {showResults.earnedPoints} of {showResults.totalPoints}</div>
+          </div>
+
+          {!showResults.passed && (
+            <div style={{
+              padding: '15px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '5px',
+              marginBottom: '20px'
+            }}>
+              <strong>Passing Score Required: {assessment.passingScore}%</strong><br />
+              You may retake this assessment after reviewing the training material.
+            </div>
+          )}
+
+          <button
+            onClick={onComplete}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '16px',
+              cursor: 'pointer'
+            }}
+          >
+            Back to Assessments
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      {/* Header */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        marginBottom: '20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div>
+          <h2 style={{ margin: '0 0 5px 0' }}>{assessment.title}</h2>
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            Question {currentQuestionIndex + 1} of {totalQuestions} • 
+            Answered: {getAnsweredCount()}/{totalQuestions}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: timeLeft < 300 ? '#dc3545' : '#28a745'
+          }}>
+            ⏱️ {formatTime(timeLeft)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#666' }}>Time Remaining</div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{
+        backgroundColor: '#e9ecef',
+        height: '8px',
+        borderRadius: '4px',
+        marginBottom: '20px',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          backgroundColor: '#007bff',
+          height: '100%',
+          width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`,
+          transition: 'width 0.3s'
+        }} />
+      </div>
+
+      {/* Question */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '30px',
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ marginBottom: '20px', lineHeight: '1.5' }}>
+          {currentQuestion.question}
+        </h3>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {currentQuestion.options.map((option, index) => (
+            <label
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '15px',
+                border: '2px solid',
+                borderColor: answers[currentQuestion.id] === index ? '#007bff' : '#e9ecef',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backgroundColor: answers[currentQuestion.id] === index ? '#f8f9ff' : 'white',
+                transition: 'all 0.2s'
+              }}
+              onClick={() => handleAnswerSelect(index)}
+            >
+              <input
+                type="radio"
+                name={`question-${currentQuestion.id}`}
+                checked={answers[currentQuestion.id] === index}
+                onChange={() => handleAnswerSelect(index)}
+                style={{ marginRight: '12px' }}
+              />
+              <span style={{ fontSize: '16px' }}>{option}</span>
+            </label>
+          ))}
+        </div>
+
+        <div style={{ marginTop: '15px', fontSize: '14px', color: '#666' }}>
+          Points: {currentQuestion.points}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '10px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <button
+          onClick={handlePrevious}
+          disabled={currentQuestionIndex === 0}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: currentQuestionIndex === 0 ? '#6c757d' : '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer'
+          }}
+        >
+          ← Previous
+        </button>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+
+          {currentQuestionIndex === totalQuestions - 1 ? (
+            <button
+              onClick={handleSubmit}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Submit Assessment
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              Next →
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Assessment Card Component
+import { useAuth } from '../components/AuthContext';
+
 const AssessmentCard = ({ assessment, onEdit, onDelete, onManage }) => {
+  const { isTrainee, isCoordinator, isTrainer } = useAuth();
+  const [showConfig, setShowConfig] = useState(false);
+  const [showPreConfirm, setShowPreConfirm] = useState(false);
+  const [showAssessmentQuestions, setShowAssessmentQuestions] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [fullscreenOn, setFullscreenOn] = useState(false);
+  const [connectionStable, setConnectionStable] = useState(true);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+
+  // Simulate camera and connection check (replace with real checks in production)
+  const handleCameraCheck = () => setCameraOn(true);
+  const handleFullscreenCheck = () => setFullscreenOn(true);
+  const handleConnectionCheck = () => setConnectionStable(true);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active': return '#28a745';
@@ -361,49 +725,205 @@ const AssessmentCard = ({ assessment, onEdit, onDelete, onManage }) => {
       </div>
 
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => onEdit(assessment)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}
-        >
-          Edit Questions
-        </button>
-        <button
-          onClick={() => onManage(assessment)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#17a2b8',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}
-        >
-          Manage
-        </button>
-        <button
-          onClick={() => onDelete(assessment)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}
-        >
-          Delete
-        </button>
+        {!isTrainee() && (
+          <>
+            <button
+              onClick={() => onEdit(assessment)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Edit Questions
+            </button>
+            <button
+              onClick={() => onManage(assessment)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#17a2b8',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Manage
+            </button>
+            <button
+              onClick={() => onDelete(assessment)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              Delete
+            </button>
+          </>
+        )}
+        {isTrainee() && (
+          <button
+            onClick={() => setShowPreConfirm(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Start
+          </button>
+        )}
       </div>
+
+      {/* Pre-assessment Confirmation Modal */}
+      {showPreConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.3)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: 24,
+            width: 600,
+            minHeight: 400,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            boxShadow: '0 2px 12px #0002',
+            padding: 32
+          }}>
+            <h2 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 32 }}>📘</span> Start Assessment
+            </h2>
+            <p style={{ marginBottom: 12, textAlign: 'center' }}>
+              Before you begin the assessment, please confirm that you have read and understood the training material.<br />
+              { (assessment.requireCamera || assessment.requireFullscreen) && (
+                <span>If camera or fullscreen mode is required (as set by the trainer/coordinator), please allow the permissions when prompted.<br /></span>
+              )}
+            </p>
+            <div style={{ margin: '18px 0', width: '100%' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}>
+                <input type="checkbox" checked={confirmChecked} onChange={(e) => setConfirmChecked(e.target.checked)} />
+                <span>I confirm that I have read and understood all the training content and I am ready to start the assessment.</span>
+              </label>
+              <div style={{ color: '#888', fontSize: 13, marginTop: 6, marginLeft: 28 }}>
+                You must check this box before proceeding.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button onClick={() => { setShowPreConfirm(false); setConfirmChecked(false); }} style={{ padding: '8px 20px', background: '#ccc', border: 'none', borderRadius: 4 }}>Cancel</button>
+              <button
+                disabled={!confirmChecked}
+                onClick={() => {
+                  setShowPreConfirm(false);
+                  if (assessment.requireCamera || assessment.requireFullscreen) {
+                    setShowConfig(true);
+                  } else {
+                    setShowAssessmentQuestions(true);
+                  }
+                }}
+                style={{ padding: '8px 20px', background: confirmChecked ? '#28a745' : '#aaa', color: 'white', border: 'none', borderRadius: 4, cursor: confirmChecked ? 'pointer' : 'not-allowed' }}
+              >
+                Start Assessment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Configuration Popup */}
+      {showConfig && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.3)',
+          zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{ background: '#fff', borderRadius: 10, padding: 32, minWidth: 400, boxShadow: '0 2px 12px #0002' }}>
+            <h2 style={{ marginBottom: 16 }}>⚙️ Assessment Configuration Check</h2>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 8 }}>
+                <b>Camera Access:</b> <span style={{ color: cameraOn ? 'green' : 'red' }}>{cameraOn ? 'Granted' : 'Not Granted'}</span>
+                <button onClick={handleCameraCheck} style={{ marginLeft: 12, fontSize: 12 }}>Check Camera</button>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <b>Fullscreen Mode:</b> <span style={{ color: fullscreenOn ? 'green' : 'red' }}>{fullscreenOn ? 'Enabled' : 'Not Enabled'}</span>
+                <button onClick={handleFullscreenCheck} style={{ marginLeft: 12, fontSize: 12 }}>Enable Fullscreen</button>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <b>Internet Stability:</b> <span style={{ color: connectionStable ? 'green' : 'orange' }}>{connectionStable ? 'Stable' : 'Unstable'}</span>
+                <button onClick={handleConnectionCheck} style={{ marginLeft: 12, fontSize: 12 }}>Check Connection</button>
+              </div>
+            </div>
+            <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <b>🧭 Instructions:</b>
+              <ul style={{ fontSize: 14, margin: '8px 0 0 16px' }}>
+                <li>Camera must remain ON during the entire assessment.</li>
+                <li>Do not minimize or switch tabs — doing so will end the exam immediately.</li>
+                <li>Each question must be answered within the given time.</li>
+                <li>Internet interruption may cause auto-submission.</li>
+              </ul>
+            </div>
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowConfig(false)} style={{ padding: '8px 20px', background: '#ccc', border: 'none', borderRadius: 4, fontWeight: 500 }}>Cancel</button>
+              <button
+                onClick={() => {
+                  const requirementsMet = connectionStable && (!assessment.requireCamera || cameraOn) && (!assessment.requireFullscreen || fullscreenOn);
+                  if (requirementsMet) {
+                    setShowConfig(false);
+                    setShowAssessmentQuestions(true);
+                  } else {
+                    alert('Please satisfy the required checks before starting the exam.');
+                  }
+                }}
+                disabled={!(connectionStable && (!assessment.requireCamera || cameraOn) && (!assessment.requireFullscreen || fullscreenOn))}
+                style={{ padding: '8px 20px', background: (connectionStable && (!assessment.requireCamera || cameraOn) && (!assessment.requireFullscreen || fullscreenOn)) ? '#28a745' : '#aaa', color: 'white', border: 'none', borderRadius: 4, fontWeight: 600, cursor: (connectionStable && (!assessment.requireCamera || cameraOn) && (!assessment.requireFullscreen || fullscreenOn)) ? 'pointer' : 'not-allowed' }}
+              >
+                Start Assessment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trainee Assessment Modal */}
+      {showAssessmentQuestions && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.9)',
+          zIndex: 1100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{ background: '#f8f9fa', borderRadius: 16, width: '95vw', height: '95vh', overflowY: 'auto', boxShadow: '0 2px 12px #0002' }}>
+            <TraineeAssessment
+              assessment={assessment}
+              onComplete={() => setShowAssessmentQuestions(false)}
+              onCancel={() => setShowAssessmentQuestions(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -417,6 +937,8 @@ export default function Assessments() {
       description: 'Basic knowledge assessment for Good Manufacturing Practices',
       trainingId: 1,
       status: 'Active',
+      requireCamera: false,
+      requireFullscreen: false,
       questionCount: 15,
       totalPoints: 20,
       passingScore: 80,
@@ -431,6 +953,8 @@ export default function Assessments() {
       description: 'Comprehensive safety protocols and procedures evaluation',
       trainingId: 2,
       status: 'Active',
+      requireCamera: false,
+      requireFullscreen: false,
       questionCount: 25,
       totalPoints: 35,
       passingScore: 85,
@@ -445,6 +969,8 @@ export default function Assessments() {
       description: 'Technical assessment on validation processes and documentation',
       trainingId: 3,
       status: 'Draft',
+      requireCamera: false,
+      requireFullscreen: false,
       questionCount: 0,
       totalPoints: 0,
       passingScore: 80,

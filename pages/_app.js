@@ -1,4 +1,5 @@
 import { AuthProvider } from '../components/AuthContext';
+import { NotificationProvider } from '../components/NotificationContext';
 import { useAuth } from '../components/AuthContext';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
@@ -57,9 +58,11 @@ export default function App({ Component, pageProps }) {
         }
       `}</style>
       <AuthProvider>
-        <AuthGuard>
-          <Component {...pageProps} />
-        </AuthGuard>
+        <NotificationProvider>
+          <AuthGuard>
+            <Component {...pageProps} />
+          </AuthGuard>
+        </NotificationProvider>
       </AuthProvider>
     </>
   );

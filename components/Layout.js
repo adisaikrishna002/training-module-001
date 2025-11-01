@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { useRouter } from 'next/router';
 import { MODULES, ROLE_LABELS } from '../utils/rbac';
+import NotificationBell from './NotificationBell';
 
 export default function Layout({ children }) {
   const { user, logout, canUserAccessModule } = useAuth();
@@ -155,6 +156,7 @@ export default function Layout({ children }) {
             Training Management System
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <NotificationBell />
             <div style={{ fontSize: '14px', color: '#666' }}>
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 

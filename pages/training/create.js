@@ -664,6 +664,101 @@ const TrainingForm = ({ onSubmit, onCancel, showNotification }) => {
   );
 };
 
+const TrainingList = ({ trainings, onSelect }) => (
+  <div>
+    <h1>Training List</h1>
+    <ul>
+      {trainings.map((training) => (
+        <li key={training.id}>
+          <button onClick={() => onSelect(training)}>
+            {training.title} ({training.status})
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const TrainingCreationDashboard = ({ trainings }) => (
+  <div>
+    <h1>Training Creation Dashboard</h1>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ background: '#007bff', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{trainings.length}</h2>
+        <p>Total Trainings</p>
+      </div>
+      <div style={{ background: '#28a745', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{trainings.filter(t => t.status === 'Published').length}</h2>
+        <p>Published Trainings</p>
+      </div>
+      <div style={{ background: '#ffc107', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{trainings.filter(t => t.status === 'Draft').length}</h2>
+        <p>Draft Trainings</p>
+      </div>
+      <div style={{ background: '#17a2b8', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{trainings.reduce((sum, t) => sum + t.assignedCount, 0)}</h2>
+        <p>Total Assignments</p>
+      </div>
+    </div>
+    <ul style={{ listStyle: 'none', padding: 0 }}>
+      {trainings.map((training) => (
+        <li key={training.id} style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px', padding: '20px' }}>
+          <h3>{training.title}</h3>
+          <p>{training.description}</p>
+          <p>Category: {training.category} | Type: {training.type} | Duration: {training.duration} minutes</p>
+          <p>Trainer: {training.trainer}</p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button style={{ background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Edit</button>
+            <button style={{ background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Manage</button>
+            <button style={{ background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Delete</button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const TrainingCreationPage = () => {
+  const [selectedTraining, setSelectedTraining] = useState(null);
+  const [trainings, setTrainings] = useState([
+    { id: 1, title: 'GMP Fundamentals', description: 'Basic GMP principles', category: 'Guidelines', type: 'Document', duration: 120, trainer: 'John Doe', assignedCount: 45, status: 'Draft' },
+    { id: 2, title: 'Laboratory Safety', description: 'Lab safety training', category: 'Videos', type: 'Interactive', duration: 90, trainer: 'Jane Smith', assignedCount: 28, status: 'Published' },
+    { id: 3, title: 'Equipment Maintenance', description: 'Maintenance protocols for lab equipment', category: 'Forms', type: 'Document', duration: 60, trainer: 'Alice Johnson', assignedCount: 12, status: 'Draft' },
+  ]);
+
+  const handleTrainingSelect = (training) => {
+    setSelectedTraining(training);
+  };
+
+  const handleBackToList = () => {
+    setSelectedTraining(null);
+  };
+
+  return (
+    <Layout>
+      <div style={{ padding: '40px' }}>
+        {!selectedTraining ? (
+          <TrainingCreationDashboard trainings={trainings} />
+        ) : (
+          <div>
+            <button onClick={handleBackToList} style={{ marginBottom: '20px', padding: '10px 20px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px' }}>
+              Back to List
+            </button>
+            <TrainingForm
+              onSubmit={(data) => {
+                setTrainings((prev) => prev.map((t) => (t.id === data.id ? data : t)));
+                setSelectedTraining(null);
+              }}
+              onCancel={handleBackToList}
+              showNotification={(message, type) => alert(`${type.toUpperCase()}: ${message}`)}
+            />
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
 export default function CreateTraining() {
   const { hasUserPermission } = useAuth();
   const [notification, setNotification] = useState(null);

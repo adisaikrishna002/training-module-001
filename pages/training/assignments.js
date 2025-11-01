@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { MOCK_USERS, ROLES, ROLE_LABELS } from '../../data/mockData';
 import { useAuth } from '../../components/AuthContext';
@@ -191,6 +191,90 @@ const AssignmentModal = ({ isOpen, onClose, training, onAssign }) => {
   );
 };
 
+const TrainingMaterialViewer = ({ material, onClose }) => (
+  <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
+      <h2>Training Material</h2>
+      <div style={{ margin: '20px 0', minHeight: '200px' }}>
+        <h3>{material.title}</h3>
+        <p>{material.description}</p>
+        {material.fileUrl && (
+          <a href={material.fileUrl} target="_blank" rel="noopener noreferrer">View Material File</a>
+        )}
+      </div>
+      <button
+        onClick={onClose}
+        style={{
+          padding: '10px 24px',
+          backgroundColor: '#dc3545',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+);
+
+const TrainingAssignmentList = ({ assignments, onSelect }) => (
+  <div>
+    <h1>Training Assignments</h1>
+    <ul>
+      {assignments.map((assignment) => (
+        <li key={assignment.id}>
+          <button onClick={() => onSelect(assignment)}>
+            {assignment.title}
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const TrainingAssignmentDashboard = ({ assignments }) => (
+  <div>
+    <h1>Training Assignments Dashboard</h1>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
+      <div style={{ background: '#007bff', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{assignments.length}</h2>
+        <p>Total Assignments</p>
+      </div>
+      <div style={{ background: '#28a745', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{assignments.filter(a => a.status === 'Active').length}</h2>
+        <p>Active Assignments</p>
+      </div>
+      <div style={{ background: '#ffc107', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{assignments.reduce((sum, a) => sum + a.completions, 0)}</h2>
+        <p>Total Completions</p>
+      </div>
+      <div style={{ background: '#17a2b8', color: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center' }}>
+        <h2>{Math.round(assignments.reduce((sum, a) => sum + a.avgScore, 0) / assignments.length)}%</h2>
+        <p>Average Score</p>
+      </div>
+    </div>
+    <ul style={{ listStyle: 'none', padding: 0 }}>
+      {assignments.map((assignment) => (
+        <li key={assignment.id} style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px', padding: '20px' }}>
+          <h3>{assignment.title}</h3>
+          <p>{assignment.description}</p>
+          <p>Questions: {assignment.questions} | Points: {assignment.points} | Passing Score: {assignment.passingScore}%</p>
+          <p>Time Limit: {assignment.timeLimit} minutes</p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button style={{ background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Edit</button>
+            <button style={{ background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Manage</button>
+            <button style={{ background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', padding: '10px 20px' }}>Delete</button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
 // Assignments Page Component
 const AssignmentsPage = () => {
   const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -211,18 +295,7 @@ const AssignmentsPage = () => {
   return (
     <div>
       {!selectedAssignment ? (
-        <div>
-          <h1>Assignments</h1>
-          <ul>
-            {assignments.map((assignment) => (
-              <li key={assignment.id}>
-                <button onClick={() => handleAssignmentClick(assignment)}>
-                  {assignment.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <TrainingAssignmentList assignments={assignments} onSelect={handleAssignmentClick} />
       ) : (
         <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
@@ -261,6 +334,7 @@ export default function TrainingAssignments() {
   const { user, isTrainee } = useAuth();
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTraining, setSelectedTraining] = useState(null);
+  const [showTraineeModal, setShowTraineeModal] = useState(false);
 
   // Example list of trainings (replace with your real data source)
   const trainings = [
@@ -278,25 +352,31 @@ export default function TrainingAssignments() {
     setSelectedTraining(null);
   };
 
-  // If trainee, show only the material viewer for the first available training (or selected)
-  const [showTraineeModal, setShowTraineeModal] = useState(true);
-  if (isTrainee && user) {
-    // For demo, just show the first training; in real app, filter by assigned trainings
-    const traineeTraining = selectedTraining || trainings[0];
+  useEffect(() => {
+    console.log('Rendering TrainingAssignments component');
+  }, []);
+
+  useEffect(() => {
+    console.log('selectedAssignment state changed:', selectedAssignment);
+  }, [selectedAssignment]);
+
+  useEffect(() => {
+    if (!selectedAssignment) {
+      console.log('Resetting to assignment list view');
+      // Trigger a re-render by ensuring state consistency
+      setSelectedAssignment(null);
+    }
+  }, [selectedAssignment]);
+
+  if (isTrainee) {
     return (
       <Layout>
         <div style={{ padding: '40px' }}>
           <h2>Training Material</h2>
           <TrainingMaterialModal
             isOpen={showTraineeModal}
-            onClose={() => {
-              setShowTraineeModal(false);
-              // Optionally, redirect after closing
-              setTimeout(() => { window.location.href = '/dashboard'; }, 300);
-            }}
-            material={traineeTraining}
-            onComplete={() => alert('Training completed!')}
-            minTime={30}
+            onClose={() => setShowTraineeModal(false)}
+            material={selectedTraining || trainings[0]}
           />
         </div>
       </Layout>
@@ -330,6 +410,8 @@ export default function TrainingAssignments() {
           training={selectedTraining}
           onAssign={handleCloseAssignModal}
         />
+        {/* Dashboard Component - Uncomment to use dashboard view */}
+        {/* <TrainingAssignmentDashboard assignments={assignments} /> */}
       </div>
     </Layout>
   );
