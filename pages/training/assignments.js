@@ -335,6 +335,7 @@ export default function TrainingAssignments() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [showTraineeModal, setShowTraineeModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   // Example list of trainings (replace with your real data source)
   const trainings = [
@@ -361,10 +362,10 @@ export default function TrainingAssignments() {
   }, [selectedAssignment]);
 
   useEffect(() => {
-    if (!selectedAssignment) {
-      console.log('Resetting to assignment list view');
-      // Trigger a re-render by ensuring state consistency
-      setSelectedAssignment(null);
+    if (selectedAssignment) {
+      console.log('Assignment selected:', selectedAssignment);
+    } else {
+      console.log('No assignment selected - showing list view');
     }
   }, [selectedAssignment]);
 
